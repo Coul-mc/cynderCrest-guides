@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CynderCrest Guides</title>
+<style>
+:root {
+  --bg: #0b1020;
+  --panel: #151d32;
+  --accent: #a78bfa;
+  --text: #f4f4ff;
+  --muted: #a5aec4;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+header {
+  padding: 22px 18px;
+  background: #111a30;
+  border-bottom: 1px solid #28324b;
+}
+.brand { font-size: 22px; font-weight: bold; }
+.brand span { color: var(--accent); }
+header p { color: var(--muted); margin-bottom: 0; }
+main { max-width: 800px; margin: auto; padding: 18px; }
+nav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 0;
+}
+nav button {
+  flex-shrink: 0;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #303b55;
+  border-radius: 12px;
+  padding: 12px 15px;
+}
+button { cursor: pointer; font-size: 14px; }
+nav button.active, .primary {
+  background: var(--accent);
+  color: #15102a;
+  border-color: var(--accent);
+}
+.card {
+  background: var(--panel);
+  border: 1px solid #28344e;
+  padding: 18px;
+  border-radius: 16px;
+  margin: 14px 0;
+}
+h1 { font-size: 27px; }
+h2 { font-size: 20px; }
+p { line-height: 1.6; }
+.muted { color: var(--muted); }
+.tag { color: var(--accent); font-weight: bold; }
+.action {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #424d69;
+  background: #202b43;
+  color: var(--text);
+  margin: 5px 3px 5px 0;
+}
+.primary { border: 0; font-weight: bold; }
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 9px 0;
+}
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 9px;
+  background: #0b1020;
+  color: white;
+  border: 1px solid #424d69;
+}
+footer {
+  text-align: center;
+  color: var(--muted);
+  padding: 25px;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Cynder<span>Crest</span> Guides</div>
+  <p>Learn smarter. Grow stronger.</p>
+</header>
+
+<main>
+<nav id="nav">
+  <button class="active" data-tab="Home">Home</button>
+  <button data-tab="Notes">Notes</button>
+  <button data-tab="Questions">Questions</button>
+  <button data-tab="Progress">Progress</button>
+  <button data-tab="AI">Crest AI</button>
+</nav>
+<div id="app"></div>
+</main>
+
+<footer>CynderCrest Guides · Your learning journey starts here.</footer>
+
+<script>
+const subjects = {
+  "Science": {
+    "Cells": "A cell is the basic structural and functional unit of life. The cell membrane controls what enters and leaves the cell. The cytoplasm is where many chemical reactions occur. The nucleus contains genetic material and controls cell activities. Plant cells also have a cellulose cell wall, a large permanent vacuole and, in photosynthetic cells, chloroplasts.",
+    "Diffusion": "Diffusion is the net movement of particles from a region of higher concentration to a region of lower concentration, down a concentration gradient. It occurs because particles move randomly. Diffusion helps organisms exchange gases and absorb some substances.",
+    "Osmosis": "Osmosis is the net movement of water molecules through a selectively permeable membrane from a region of higher water concentration to lower water concentration. It helps plant roots absorb water and helps maintain cell turgidity."
+  },
+  "Social Studies": {
+    "Historical Sources": "Historical sources provide evidence about the past. Primary sources come directly from the period being studied, such as letters, tools, photographs and eyewitness accounts. Secondary sources interpret or explain the past, such as textbooks written later."
+  },
+  "Mathematics": {
+    "Algebra": "Algebra uses letters and symbols to represent numbers. Like terms have the same variables raised to the same powers. For example, 3x + 2x = 5x. To solve x + 4 = 9, subtract 4 from both sides to obtain x = 5."
+  }
+};
+
+const quiz = [
+  {
+    subject: "Science",
+    question: "What is the basic unit of life?",
+    options: ["An organ", "A cell", "A tissue", "A system"],
+    answer: 1,
+    explanation: "A cell is the basic structural and functional unit of life."
+  },
+  {
+    subject: "Science",
+    question: "Diffusion moves particles from...",
+    options: ["Low to high concentration", "High to low concentration", "Cold to hot only", "Small to large objects"],
+    answer: 1,
+    explanation: "Net diffusion occurs down a concentration gradient."
+  },
+  {
+    subject: "Social Studies",
+    question: "Which is a primary historical source?",
+    options: ["A modern textbook", "A recent summary", "An eyewitness account", "A later interpretation"],
+    answer: 2,
+    explanation: "An eyewitness account comes directly from someone who experienced the event."
+  },
+  {
+    subject: "Mathematics",
+    question: "Simplify 3x + 2x.",
+    options: ["5", "5x", "6x", "x"],
+    answer: 1,
+    explanation: "Adding the coefficients gives 3x + 2x = 5x."
+  }
+];
+
+let saved = {};
+try {
+  saved = JSON.parse(localStorage.getItem("ccg-data") || "{}");
+} catch (e) { saved = {}; }
+
+saved.xp = saved.xp || 0;
+saved.done = saved.done || [];
+saved.notesRead = saved.notesRead || [];
+saved.level = saved.level || "Grade 9";
+
+let currentTab = "Home";
+let questionIndex = 0;
+let answered = false;
+
+function persist() {
+  localStorage.setItem("ccg-data", JSON.stringify(saved));
+}
+
+function escapeHTML(text) {
+  return String(text).replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;",
+    '"':"&quot;", "'":"&#39;"
+  }[c]));
+}
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll("#nav button").forEach(b => {
+    b.classList.toggle("active", b.dataset.tab === tab);
+  });
+  render();
+}
+
+document.querySelector("#nav").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-tab]");
+  if (btn) setTab(btn.dataset.tab);
+});
+
+function card(title, content) {
+  return `<section class="card"><h2>${title}</h2>${content}</section>`;
+}
+
+function render() {
+  const app = document.getElementById("app");
+
+  if (currentTab === "Home") {
+    app.innerHTML = `
+      <h1>Welcome, learner! 👋</h1>
+      <p class="muted">Your knowledge journey starts here.</p>
+      ${card("Your learning stats", `
+        <p><span class="tag">${saved.xp} XP</span> earned so far</p>
+        <p>${saved.done.length} quiz questions completed</p>
+        <p>${saved.notesRead.length} notes topics read</p>
+      `)}
+      ${card("Choose your next step", `
+        <button class="action primary" onclick="setTab('Notes')">Read notes</button>
+        <button class="action" onclick="setTab('Questions')">Practise questions</button>
+      `)}
+      ${card("Explore subjects", `
+        ${Object.keys(subjects).map(s =>
+          `<button class="action" onclick="openSubject('${s}')">${s}</button>`
+        ).join("")}
+      `)}
+    `;
+  }
+
+  if (currentTab === "Notes") {
+    app.innerHTML = `
+      <h1>Notes Library 📚</h1>
+      <p class="muted">Read at your own pace. No quiz required.</p>
+      <label for="grade">Your grade</label>
+      <select id="grade" onchange="saved.level=this.value;persist()">
+        ${["Grade 7","Grade 8","Grade 9"].map(g =>
+          `<option ${saved.level===g?"selected":""}>${g}</option>`
+        ).join("")}
+      </select>
+      <label for="subject">Choose a subject</label>
+      <select id="subject" onchange="renderTopics()">
+        ${Object.keys(subjects).map(s => `<option>${s}</option>`).join("")}
+      </select>
+      <div id="topics"></div>
+    `;
+    renderTopics();
+  }
+
+  if (currentTab === "Questions") {
+    const q = quiz[questionIndex];
+    app.innerHTML = `
+      <h1>Practice Questions 🧠</h1>
+      <p class="muted">Question ${questionIndex + 1} of ${quiz.length}</p>
+      <div class="card">
+        <span class="tag">${q.subject}</span>
+        <h2>${q.question}</h2>
+        <div id="options">
+          ${q.options.map((o,i) =>
+            `<button class="action option" onclick="checkAnswer(${i})">${escapeHTML(o)}</button>`
+          ).join("")}
+        </div>
+        <div id="feedback"></div>
+        <button id="next" class="action primary" style="display:none" onclick="nextQuestion()">Next question →</button>
+      </div>
+      <p class="muted">Correct answers earn 10 XP. You can retry incorrect answers.</p>
+    `;
+  }
+
+  if (currentTab === "Progress") {
+    app.innerHTML = `
+      <h1>Your Progress 🏆</h1>
+      ${card("Experience points", `<h1 class="tag">${saved.xp} XP</h1>`)}
+      ${card("Learning activity", `
+        <p>Questions completed: ${saved.done.length}</p>
+        <p>Notes topics read: ${saved.notesRead.length}</p>
+        <p>Grade selected: ${escapeHTML(saved.level)}</p>
+      `)}
+      <button class="action" onclick="resetProgress()">Reset progress</button>
+      <p class="muted">Progress is saved in this browser on this device.</p>
+    `;
+  }
+
+  if (currentTab === "AI") {
+    app.innerHTML = `
+      <h1>Crest AI ✨</h1>
+      ${card("Your future AI tutor", `
+        <p>Ask questions, request simpler explanations and get help revising topics.</p>
+        <p class="muted">The AI tutor is not connected yet. We will add it later using a suitable free AI service if available.</p>
+        <input id="aiQuestion" placeholder="What would you like to learn?">
+        <button class="action primary" onclick="saveAIQuestion()">Save question for later</button>
+        <div id="aiFeedback"></div>
+      `)}
+    `;
+  }
+}
+
+function openSubject(subject) {
+  setTab("Notes");
+  document.getElementById("subject").value = subject;
+  renderTopics();
+}
+
+function renderTopics() {
+  const select = document.getElementById("subject");
+  const area = document.getElementById("topics");
+  if (!select || !area) return;
+
+  const subject = select.value;
+  area.innerHTML = Object.entries(subjects[subject]).map(([topic,note]) => {
+    const id = subject + ":" + topic;
+    const read = saved.notesRead.includes(id);
+    return `<section class="card">
+      <h2>${escapeHTML(topic)}</h2>
+      <p>${escapeHTML(note)}</p>
+      <button class="action ${read?"":"primary"}"
+        onclick="markRead('${id.replace(/'/g,"\\'")}')">
+        ${read?"✓ Read":"Mark as read"}
+      </button>
+    </section>`;
+  }).join("");
+}
+
+function markRead(id) {
+  if (!saved.notesRead.includes(id)) {
+    saved.notesRead.push(id);
+    saved.xp += 2;
+    persist();
+  }
+  render();
+}
+
+function checkAnswer(choice) {
+  if (answered) return;
+  const q = quiz[questionIndex];
+  const feedback = document.getElementById("feedback");
+
+  if (choice === q.answer) {
+    answered = true;
+    saved.xp += 10;
+    saved.done.push(questionIndex);
+    persist();
+    feedback.innerHTML = `<p class="tag">Correct! +10 XP 🎉</p><p>${q.explanation}</p>`;
+    document.querySelectorAll("#options button").forEach(b => b.disabled = true);
+    document.getElementById("next").style.display = "inline-block";
+  } else {
+    feedback.innerHTML = `<p>Not quite! Try again. 💡</p>`;
+  }
+}
+
+function nextQuestion() {
+  questionIndex = (questionIndex + 1) % quiz.length;
+  answered = false;
+  setTab("Questions");
+}
+
+function resetProgress() {
+  if (confirm("Reset all saved XP and progress?")) {
+    saved.xp = 0;
+    saved.done = [];
+    saved.notesRead = [];
+    persist();
+    render();
+  }
+}
+
+function saveAIQuestion() {
+  const input = document.getElementById("aiQuestion");
+  const feedback = document.getElementById("aiFeedback");
+  if (!input.value.trim()) {
+    feedback.textContent = "Enter a question first.";
+    return;
+  }
+  feedback.textContent = "AI is not connected yet. Keep this question to ask your tutor later: " + input.value.trim();
+}
+
+render();
+</script>
+</body>
+  </html>
+  
